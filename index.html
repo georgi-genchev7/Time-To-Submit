@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time to Submit - OKR Baseline Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#f8f7f5;--surface:#fff;--surface-alt:#f2f1ee;--text:#1a1a1a;--text-muted:#6b6966;
+    --text-light:#9b9894;--border:#e5e3df;--green:#1a8a5f;--green-bg:#e8f5ef;--red:#c0502a;
+    --red-bg:#fdeee9;--blue:#3266ad;--blue-bg:#e8f0fa;--purple:#7B61B8;--purple-bg:#f1ecf9;
+    --amber:#c47f17;--amber-bg:#fef5e4;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding:32px 24px;max-width:1100px;margin:0 auto}
+  .header{margin-bottom:36px}
+  .header h1{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+  .header .sub{color:var(--text-muted);font-size:14px}
+  .header .sub span{display:inline-block;background:var(--surface-alt);padding:2px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-size:12px;margin-left:6px}
+  .header .sub span.new{background:var(--green-bg);color:var(--green);font-weight:600}
+  .okr-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .card.cnp::before{background:var(--purple)}.card.cp::before{background:var(--blue)}
+  .card-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .cnp .card-label{color:var(--purple)}.cp .card-label{color:var(--blue)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .cnp .dot{background:var(--purple)}.cp .dot{background:var(--blue)}
+  .mr{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 0;border-bottom:1px solid var(--border)}
+  .mr:last-child{border-bottom:none}
+  .mr.latest{background:var(--green-bg);margin:0 -24px;padding:12px 24px;border-radius:0 0 var(--radius) var(--radius);border-bottom:none}
+  .ml{font-size:13px;color:var(--text-muted)}
+  .mv{font-family:'DM Mono',monospace;font-size:20px;font-weight:500}
+  .mv .u{font-size:12px;color:var(--text-light);margin-left:2px}
+  .mv .d{font-size:12px;color:var(--text-muted);margin-left:8px;font-family:'DM Sans',sans-serif}
+  .mv.baseline{color:var(--red)}.mv.target{color:var(--green)}.mv.current{color:var(--green)}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace}
+  .badge.strong{background:var(--green);color:#fff}
+  .prog{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)}
+  .prog-label{font-size:11px;color:var(--text-muted);margin-bottom:6px;display:flex;justify-content:space-between}
+  .prog-bar{height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden}
+  .prog-fill{height:100%;border-radius:3px}
+  .cnp .prog-fill{background:var(--purple)}.cp .prog-fill{background:var(--blue)}
+  .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:24px}
+  .section h2{font-size:16px;font-weight:600;margin-bottom:4px}
+  .section .desc{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+  .chart-c{position:relative;height:340px}
+  .ptable{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+  .ptable th{text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);padding:8px 12px;border-bottom:2px solid var(--border)}
+  .ptable td{padding:10px 12px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:12.5px}
+  .ptable tr:last-child td{border-bottom:none}
+  .ptable .rl{font-family:'DM Sans',sans-serif;font-weight:500}
+  .ptable .hl{background:var(--green-bg);font-weight:600}
+  .ptable .bl{background:var(--red-bg)}
+  .ptable .lt{background:#f0f7ff}
+  .ptable .delta{font-size:11px;font-weight:600}
+  .ptable .delta.g{color:var(--green)}.ptable .delta.w{color:var(--amber)}
+  .cons{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:24px}
+  .cons h2{font-size:16px;font-weight:600;margin-bottom:16px}
+  .ci{padding:14px 16px;background:var(--surface-alt);border-radius:8px;margin-bottom:10px;font-size:13.5px;line-height:1.65}
+  .ci:last-child{margin-bottom:0}
+  .ci .t{font-weight:600;margin-bottom:4px;font-size:13px}
+  .ci .t.risk{color:var(--red)}.ci .t.info{color:var(--blue)}.ci .t.note{color:var(--amber)}.ci .t.good{color:var(--green)}
+  .foot{font-size:12px;color:var(--text-light);margin-top:24px;padding-top:16px;border-top:1px solid var(--border);line-height:1.7}
+
+  /* Tabs for chasing charts */
+  .tab-bar{display:flex;gap:4px;margin-bottom:16px}
+  .tab-btn{padding:6px 16px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s}
+  .tab-btn.active{background:var(--text);color:#fff;border-color:var(--text)}
+  .tab-btn:hover:not(.active){background:var(--surface-alt)}
+  .tab-panel{display:none}.tab-panel.active{display:block}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Time to Submit - OKR Baseline & Targets</h1>
+  <div class="sub">
+    Expense Automation
+    <span>Feb 2025 – Mar 2026</span>
+  </div>
+</div>
+
+<!-- OKR summary cards -->
+<div class="okr-grid">
+  <div class="card cnp">
+    <div class="card-label"><span class="dot"></span> Card Not Present</div>
+    <div class="mr"><div class="ml">Oct–Dec 2025 baseline (avg p90)</div><div class="mv baseline">570<span class="u">h</span><span class="d">23.8 days</span></div></div>
+    <div class="mr"><div class="ml">Target (80% reduction)</div><div class="mv target">114<span class="u">h</span><span class="d">4.8 days</span></div></div>
+    <div class="mr latest"><div class="ml"><strong>Mar 2026</strong> (latest)</div><div class="mv current">237<span class="u">h</span><span class="d">9.9 days</span> <span class="badge strong">−58%</span></div></div>
+    <div class="prog"><div class="prog-label"><span>Progress toward 80% target</span><span style="font-family:'DM Mono',monospace;font-weight:600">73%</span></div><div class="prog-bar"><div class="prog-fill" style="width:73%"></div></div></div>
+  </div>
+  <div class="card cp">
+    <div class="card-label"><span class="dot"></span> Card Present</div>
+    <div class="mr"><div class="ml">Oct–Dec 2025 baseline (avg p90)</div><div class="mv baseline">195<span class="u">h</span><span class="d">8.1 days</span></div></div>
+    <div class="mr"><div class="ml">Target (80% reduction)</div><div class="mv target">39<span class="u">h</span><span class="d">1.6 days</span></div></div>
+    <div class="mr latest"><div class="ml"><strong>Mar 2026</strong> (latest)</div><div class="mv current">107<span class="u">h</span><span class="d">4.5 days</span> <span class="badge strong">−45%</span></div></div>
+    <div class="prog"><div class="prog-label"><span>Progress toward 80% target</span><span style="font-family:'DM Mono',monospace;font-weight:600">56%</span></div><div class="prog-bar"><div class="prog-fill" style="width:56%"></div></div></div>
+  </div>
+</div>
+
+<!-- Overall p90 trend -->
+<div class="section">
+  <h2>p90 Time to Submit - Monthly Trend</h2>
+  <div class="desc">Weighted across chasing segments. Dashed lines = 80% reduction targets. Shaded zone = Oct–Dec baseline period.</div>
+  <div class="chart-c"><canvas id="trendChart"></canvas></div>
+</div>
+
+<!-- NEW: Chasing adoption vs p90 -->
+<div class="section">
+  <h2>Chasing Adoption vs p90</h2>
+  <div class="desc">Left axis: p90 time to submit for With Chasing and Without Chasing segments. Right axis (amber bars): % of total expenses from accounts With Chasing.</div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('cnp-chase')">Card Not Present</button>
+    <button class="tab-btn" onclick="switchTab('cp-chase')">Card Present</button>
+  </div>
+  <div id="cnp-chase" class="tab-panel active"><div class="chart-c"><canvas id="chasingCnpChart"></canvas></div></div>
+  <div id="cp-chase" class="tab-panel"><div class="chart-c"><canvas id="chasingCpChart"></canvas></div></div>
+</div>
+
+<!-- MoM chart -->
+<div class="section">
+  <h2>Month-on-Month p90 Drop</h2>
+  <div class="desc">Absolute hours shed each month. Is the rate of improvement accelerating or decelerating?</div>
+  <div class="chart-c" style="height:220px"><canvas id="momChart"></canvas></div>
+</div>
+
+<!-- Percentile tables -->
+<div class="section">
+  <h2>Percentile Breakdown - Oct 2025 to Mar 2026</h2>
+  <div class="desc">Full distribution shift. All values in hours.</div>
+  <div style="margin-bottom:12px;font-size:13px;font-weight:600;color:var(--purple)">Card Not Present</div>
+  <table class="ptable">
+    <tr><th>Month</th><th>p50</th><th>p70</th><th>p90</th><th>Avg</th><th>Expenses</th><th>Δ from baseline</th></tr>
+    <tr class="bl"><td class="rl">Oct 2025</td><td>71.9</td><td>170.9</td><td>567.4</td><td>219.4</td><td>241,384</td><td>-</td></tr>
+    <tr class="bl"><td class="rl">Nov 2025</td><td>72.7</td><td>174.5</td><td>531.1</td><td>202.9</td><td>233,112</td><td>-</td></tr>
+    <tr class="bl"><td class="rl">Dec 2025</td><td>75.1</td><td>195.0</td><td>611.8</td><td>204.6</td><td>199,694</td><td>-</td></tr>
+    <tr><td class="rl">Jan 2026</td><td>68.5</td><td>157.9</td><td>456.8</td><td>154.8</td><td>231,782</td><td class="delta w">−20%</td></tr>
+    <tr><td class="rl">Feb 2026</td><td>53.6</td><td>135.7</td><td>330.4</td><td>116.1</td><td>231,251</td><td class="delta g">−42%</td></tr>
+    <tr class="lt"><td class="rl"><strong>Mar 2026</strong></td><td>37.3</td><td>96.8</td><td>237.3</td><td>84.8</td><td>239,517</td><td class="delta g" style="font-size:13px"><strong>−58%</strong></td></tr>
+    <tr class="hl"><td class="rl" style="font-weight:700">Target</td><td>-</td><td>-</td><td style="font-weight:700">114.0</td><td>-</td><td>-</td><td class="delta g">−80%</td></tr>
+  </table>
+  <div style="margin:24px 0 12px;font-size:13px;font-weight:600;color:var(--blue)">Card Present</div>
+  <table class="ptable">
+    <tr><th>Month</th><th>p50</th><th>p70</th><th>p90</th><th>Avg</th><th>Expenses</th><th>Δ from baseline</th></tr>
+    <tr class="bl"><td class="rl">Oct 2025</td><td>4.2</td><td>31.5</td><td>194.8</td><td>86.4</td><td>324,819</td><td>-</td></tr>
+    <tr class="bl"><td class="rl">Nov 2025</td><td>3.8</td><td>31.7</td><td>189.1</td><td>78.6</td><td>296,679</td><td>-</td></tr>
+    <tr class="bl"><td class="rl">Dec 2025</td><td>3.8</td><td>30.3</td><td>201.0</td><td>79.8</td><td>250,336</td><td>-</td></tr>
+    <tr><td class="rl">Jan 2026</td><td>3.1</td><td>27.8</td><td>167.1</td><td>59.2</td><td>274,505</td><td class="delta w">−14%</td></tr>
+    <tr><td class="rl">Feb 2026</td><td>2.6</td><td>22.6</td><td>135.7</td><td>42.5</td><td>303,044</td><td class="delta g">−30%</td></tr>
+    <tr class="lt"><td class="rl"><strong>Mar 2026</strong></td><td>2.1</td><td>19.7</td><td>106.9</td><td>32.9</td><td>338,245</td><td class="delta g" style="font-size:13px"><strong>−45%</strong></td></tr>
+    <tr class="hl"><td class="rl" style="font-weight:700">Target</td><td>-</td><td>-</td><td style="font-weight:700">39.0</td><td>-</td><td>-</td><td class="delta g">−80%</td></tr>
+  </table>
+</div>
+
+
+<script>
+const M = ['Feb 25','Mar 25','Apr 25','May 25','Jun 25','Jul 25','Aug 25','Sep 25','Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26'];
+const cnpP90 = [634.2,596.0,654.7,617.3,589.1,619.5,623.4,592.8,567.4,531.1,611.8,456.8,330.4,237.3];
+const cpP90 = [187.1,176.5,205.2,188.7,190.7,187.7,210.3,194.6,194.8,189.1,201.0,167.1,135.7,106.9];
+
+// Chasing data
+const cnpChP90  = [null,null,457.6,381.0,381.9,486.9,637.8,489.5,564.6,531.8,608.4,471.0,436.1,238.8];
+const cnpNcP90  = [640.3,597.6,657.8,623.0,596.1,625.5,626.2,598.1,576.3,538.3,626.5,501.5,239.8,145.6];
+const cnpChPct  = [0,0,0.1,1.4,2.3,2.1,2.0,1.8,3.7,4.8,8.5,10.5,97.4,98.4];
+
+const cpChP90   = [null,null,325.6,146.7,170.9,210.3,161.9,216.5,205.7,271.4,247.0,176.2,152.6,108.1];
+const cpNcP90   = [187.1,178.4,207.2,189.7,191.3,188.0,210.6,194.8,195.5,188.5,208.4,169.7,45.4,47.0];
+const cpChPct   = [0,0,0.0,0.5,0.8,0.7,0.7,0.6,1.3,1.8,5.0,5.8,97.3,97.9];
+
+// -- Overall trend chart --
+const ctx1 = document.getElementById('trendChart').getContext('2d');
+new Chart(ctx1, {
+  type:'line',
+  data:{
+    labels:M,
+    datasets:[
+      {label:'Card Not Present p90',data:cnpP90,borderColor:'#7B61B8',borderWidth:2.5,pointRadius:c=>c.dataIndex===13?7:4,pointBackgroundColor:'#7B61B8',pointBorderColor:c=>c.dataIndex===13?'#fff':'transparent',pointBorderWidth:c=>c.dataIndex===13?2.5:0,tension:.3,fill:false},
+      {label:'Card Present p90',data:cpP90,borderColor:'#3266ad',borderWidth:2.5,pointRadius:c=>c.dataIndex===13?7:4,pointBackgroundColor:'#3266ad',pointBorderColor:c=>c.dataIndex===13?'#fff':'transparent',pointBorderWidth:c=>c.dataIndex===13?2.5:0,tension:.3,fill:false},
+      {label:'CNP Target',data:Array(14).fill(114),borderColor:'rgba(123,97,184,.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false},
+      {label:'CP Target',data:Array(14).fill(39),borderColor:'rgba(50,102,173,.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{family:"'DM Sans'",size:12},usePointStyle:true,pointStyle:'circle',padding:20,filter:i=>!i.text.includes('Target')}},tooltip:{backgroundColor:'#1a1a1a',titleFont:{family:"'DM Sans'",size:13},bodyFont:{family:"'DM Mono'",size:12},padding:12,cornerRadius:8,callbacks:{label:c=>{if(c.dataset.label.includes('Target'))return null;const h=c.parsed.y;return `${c.dataset.label}: ${h.toFixed(0)}h (${(h/24).toFixed(1)}d)`}}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:"'DM Sans'",size:11},color:'#9b9894'}},y:{grid:{color:'#e5e3df'},ticks:{font:{family:"'DM Mono'",size:11},color:'#9b9894',callback:v=>v+'h'},beginAtZero:true}}
+  },
+  plugins:[{id:'bz',beforeDraw(ch){const{ctx:c,chartArea:a,scales:s}=ch;const x1=s.x.getPixelForValue(8)-15,x2=s.x.getPixelForValue(10)+15;c.save();c.fillStyle='rgba(192,80,42,.06)';c.fillRect(x1,a.top,x2-x1,a.bottom-a.top);c.strokeStyle='rgba(192,80,42,.15)';c.setLineDash([4,3]);c.strokeRect(x1,a.top,x2-x1,a.bottom-a.top);c.restore();c.save();c.font="500 10px 'DM Sans',sans-serif";c.fillStyle='rgba(192,80,42,.5)';c.textAlign='center';c.fillText('BASELINE',(x1+x2)/2,a.top+14);c.restore()}}]
+});
+
+// -- Chasing charts --
+function makeChaseChart(canvasId, chP90, ncP90, chPct, color, label) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  return new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:M,
+      datasets:[
+        {label:'With Chasing p90',data:chP90,borderColor:color,borderWidth:2.5,pointRadius:4,pointBackgroundColor:color,tension:.3,fill:false,yAxisID:'y',spanGaps:true},
+        {label:'Without Chasing p90',data:ncP90,borderColor:color,borderWidth:2,borderDash:[5,3],pointRadius:3,pointBackgroundColor:color,tension:.3,fill:false,yAxisID:'y',pointStyle:'rect'},
+        {label:'% With Chasing',data:chPct,type:'bar',backgroundColor:'rgba(196,127,23,.15)',borderColor:'rgba(196,127,23,.4)',borderWidth:1,yAxisID:'y1',barPercentage:.6,order:1}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom',labels:{font:{family:"'DM Sans'",size:12},usePointStyle:true,padding:20}},
+        tooltip:{backgroundColor:'#1a1a1a',titleFont:{family:"'DM Sans'",size:13},bodyFont:{family:"'DM Mono'",size:12},padding:12,cornerRadius:8,callbacks:{label:c=>{if(c.dataset.label.includes('%'))return `Chasing share: ${c.parsed.y.toFixed(1)}%`;const h=c.parsed.y;return h?`${c.dataset.label}: ${h.toFixed(0)}h (${(h/24).toFixed(1)}d)`:null}}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:"'DM Sans'",size:11},color:'#9b9894'}},
+        y:{position:'left',grid:{color:'#e5e3df'},ticks:{font:{family:"'DM Mono'",size:11},color:'#9b9894',callback:v=>v+'h'},beginAtZero:true,title:{display:true,text:'p90 hours',font:{family:"'DM Sans'",size:11},color:'#9b9894'}},
+        y1:{position:'right',grid:{display:false},ticks:{font:{family:"'DM Mono'",size:11},color:'rgba(196,127,23,.6)',callback:v=>v+'%'},min:0,max:100,title:{display:true,text:'% with chasing',font:{family:"'DM Sans'",size:11},color:'rgba(196,127,23,.6)'}}
+      }
+    }
+  });
+}
+
+makeChaseChart('chasingCnpChart', cnpChP90, cnpNcP90, cnpChPct, '#7B61B8', 'CNP');
+makeChaseChart('chasingCpChart', cpChP90, cpNcP90, cpChPct, '#3266ad', 'CP');
+
+// Tab switching
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  // Trigger chart resize
+  window.dispatchEvent(new Event('resize'));
+}
+
+// -- MoM chart --
+new Chart(document.getElementById('momChart').getContext('2d'), {
+  type:'bar',
+  data:{
+    labels:['Jan 26','Feb 26','Mar 26'],
+    datasets:[
+      {label:'CNP p90 drop (hours)',data:[570.1-456.8,456.8-330.4,330.4-237.3],backgroundColor:'rgba(123,97,184,.7)',borderRadius:4},
+      {label:'CP p90 drop (hours)',data:[195.0-167.1,167.1-135.7,135.7-106.9],backgroundColor:'rgba(50,102,173,.7)',borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{family:"'DM Sans'",size:12},usePointStyle:true,pointStyle:'circle',padding:20}},tooltip:{backgroundColor:'#1a1a1a',padding:12,cornerRadius:8,bodyFont:{family:"'DM Mono'",size:12},callbacks:{label:c=>`${c.dataset.label}: −${c.parsed.y.toFixed(0)}h`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:"'DM Sans'",size:11},color:'#9b9894'}},y:{grid:{color:'#e5e3df'},ticks:{font:{family:"'DM Mono'",size:11},color:'#9b9894',callback:v=>'−'+v+'h'},beginAtZero:true}}
+  }
+});
+</script>
+</body>
+</html>
